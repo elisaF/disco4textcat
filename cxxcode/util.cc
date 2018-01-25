@@ -12,6 +12,11 @@ using namespace std;
 
 #include <boost/algorithm/string.hpp>
 
+bool compare_weights(const pair<unsigned, float> &a,const pair<unsigned, float> &b)
+{
+    return a.second<b.second;
+}
+
 Corpus read_corpus(char* filename, dynet::Dict* dptr,
 		   bool b_update){
   cerr << "Reading data from " << filename << endl;

@@ -33,6 +33,9 @@ namespace po = boost::program_options;
 INITIALIZE_EASYLOGGINGPP
 #endif
 
+using namespace std;
+using namespace dynet;
+
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
 
@@ -214,7 +217,7 @@ int main(int argc, char** argv) {
 
   // start do sth
   if (task == "train"){
-    unsigned reportfreq = 50;
+    unsigned reportfreq = 100000;
     float best_dev_acc = 0.0;
     vector<unsigned> order(trncorpus.size());
     for (unsigned i = 0; i < order.size(); ++i) order[i] = i;
@@ -294,50 +297,68 @@ int main(int argc, char** argv) {
 	}
 	// evaluate on dev set
 	float devcorrect = 0;
-	ofstream devwfile;
-	if (b_verbose) devwfile.open(fprefix + ".devw");
-	for (auto& doc : devcorpus) {
-	  ComputationGraph cg;
-	  Record record;
-	  Expression loss_expr = tc.build_model(doc, cg, 0.0, true, record);
-	  vector<float> prob = as_vector(cg.forward(loss_expr));
-	  unsigned plabel = distance(prob.begin(), max_element(prob.begin(), prob.end()));
-	  if (plabel == doc.label) devcorrect += 1;
-	  // write dev weight file
-	  if (b_verbose){
-	    devwfile << "file name = " << doc.filename << endl;
-	    devwfile << "label = " << doc.label << "; plabel = " << plabel << endl;
-	    for (auto& p : record){
-	      devwfile << "(" << p.first << " : " << p.second << ") ";
-	    }
-	    devwfile << endl;
-	  }
-	}
-	dev_acc = devcorrect/devcorpus.size();
-	if (b_verbose){
+                ofstream devwfile_pos;
+                ofstream devwfile_neg;
+                if (b_verbose){
+                    devwfile_pos.open(fprefix + ".devw_pos");
+                    devwfile_neg.open(fprefix + ".devw_neg");
+                }
+                for (auto& doc : devcorpus) {
+                    ComputationGraph cg;
+                    Record record;
+                    Expression loss_expr = tc.build_model(doc, cg, 0.0, true, record);
+                    vector<float> prob = as_vector(cg.forward(loss_expr));
+                    unsigned plabel = distance(prob.begin(), max_element(prob.begin(), prob.end()));
+                    if (plabel == doc.label) devcorrect += 1;
+
+                    // write dev weight file
+                    if (b_verbose){
+                        std::sort(record.begin(), record.end(), compare_weights);
+                        if (plabel == doc.label) {
+                            devwfile_pos << "file name = " << doc.filename << endl;
+                            devwfile_pos << "label = " << doc.label << "; plabel = " << plabel << endl;
+                            for (auto & element : record){
+                                devwfile_pos << "(" <<  element.first << " : " << element.second << ") ";
+                            }
+                            devwfile_pos << endl;
+                        } else {
+                            devwfile_neg << "file name = " << doc.filename << endl;
+                            devwfile_neg << "label = " << doc.label << "; plabel = " << plabel << endl;
+                            for (auto & element : record){
+                                devwfile_neg << "(" <<  element.first << " : " << element.second << ") ";
+                            }
+                            devwfile_neg << endl;
+                        }
+                    }
+                }
+                dev_acc = devcorrect/devcorpus.size();
+                if (b_verbose){
 #if _NO_DEBUG_MODE_
-	  LOG(INFO) << "Dev accuracy = " << boost::format("%1.4f") % dev_acc
-		    << " ( " << boost::format("%1.4f") % best_dev_acc << " )";
+                    LOG(INFO) << "Dev accuracy = " << boost::format("%1.4f") % dev_acc
+                              << " ( " << boost::format("%1.4f") % best_dev_acc << " )";
 #else
-	  cout << "Dev accuracy = " << boost::format("%1.4f") % dev_acc
+                    cout << "Dev accuracy = " << boost::format("%1.4f") % dev_acc
 	       << " ( " << boost::format("%1.4f") % best_dev_acc << " )" << endl;
 #endif
-	}
-	if (dev_acc > best_dev_acc) {
-	  // cout << " Save model to: " << fprefix << endl;
-	  if (b_verbose){
+                }
+                if (dev_acc > best_dev_acc) {
+                    // cout << " Save model to: " << fprefix << endl;
+                    if (b_verbose){
 #if _NO_DEBUG_MODE_
-	    LOG(INFO) << "Save model to: " << fprefix;
+                        LOG(INFO) << "Save model to: " << fprefix;
 #else
-	    cout << "Save model to: " << fprefix << endl;
+                        cout << "Save model to: " << fprefix << endl;
 #endif
-	  }
-	  best_dev_acc = dev_acc;
-	  save_model(fprefix+".model", model);
-	}
-	if (b_verbose) devwfile.close();
-      }
-    }
+                    }
+                    best_dev_acc = dev_acc;
+                    save_model(fprefix+".model", model);
+                }
+                if (b_verbose) {
+                    devwfile_pos.close();
+                    devwfile_neg.close();
+                }
+            }
+        }
     // cerr << "Result for SMAC: SUCCESS, 0, 0, " << best_dev_acc << ", 0" << endl;
     // cout << "Final Dev Accuracy : " << boost::format("%1.4f") % best_dev_acc << endl;
 #if _NO_DEBUG_MODE_

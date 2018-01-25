@@ -40,6 +40,8 @@ struct Doc{
 
 typedef vector<Doc> Corpus;
 
+bool compare_weights(const pair<unsigned, float> &a, const pair<unsigned, float> &b);
+
 Edu read_edu(const string& line, dynet::Dict* dptr, bool b_update);
 
 Corpus read_corpus(char* filename, dynet::Dict* dptr, bool b_update);
