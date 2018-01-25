@@ -1,16 +1,17 @@
-CC=clang++
-LIBS=-L./dynet/build/dynet -ldynet -lstdc++ -lm -lboost_serialization -lboost_filesystem -lboost_system -lboost_random -lboost_program_options
-CFLAGS=-I./dynet -I./dynet/eigen -I./easyloggingpp/src -std=gnu++11 -Wall # -O3 -Wunused -Wreturn-type
+CC=g++
+#CC=g++
+#CC=clang++
+LIBS=-L/scratch/cluster/elisaf/dynet/build/dynet -ldynet -lm -lboost_serialization -lboost_filesystem -lboost_system -lboost_random -lboost_program_options
+CFLAGS=-I/scratch/cluster/elisaf/dynet -I/scratch/cluster/elisaf/eigen -I/scratch/cluster/elisaf/easyloggingpp-9.95.3/src -std=gnu++11 -Wall
 OBJ=main.o util.o
 
 all: dtc
 
 %.o: %.cc
-	$(CC) $(CFLAGS) -c -o $@ $< 
+	$(CC) -v $(CFLAGS) -c -o $@ $< -L/scratch/cluster/elisaf/dynet/build/dynet
 
 dtc: main.o util.o
-	$(CC) $(LIBS) $^ -o $@
+	$(CC) -v  /scratch/cluster/elisaf/easyloggingpp-9.95.3/src/easylogging++.cc -std=gnu++11 $(LIBS) $^ -o $@ -L/scratch/cluster/elisaf/dynet/build/dynet -ldynet -lm -lboost_serialization -lboost_filesystem -lboost_system -lboost_random -lboost_program_options
 
 clean:
 	rm -rf *.o *.*~ dtc
-
