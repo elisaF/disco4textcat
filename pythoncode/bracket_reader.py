@@ -111,7 +111,7 @@ class BracketReader(object):
 
         
 def test():
-    fname = "data/parses/Immigration1.0-28458.brackets"
+    fname = "/scratch/cluster/elisaf/cs395t/finalProject/compare/train-99893.txt.brackets"
     reader = BracketReader()
     reader.read(fname)
     deplist = reader.convert()

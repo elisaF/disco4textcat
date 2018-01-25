@@ -1,10 +1,11 @@
 from rst_reader import RSTReader
-from os import listdir
+from os import walk
 from os.path import join, basename
 from collections import defaultdict
 from operator import itemgetter
 from string import punctuation
-import io, gzip
+import io, gzip, os, cPickle, sys
+import fnmatch
 
 
 class Doc(object):
@@ -44,40 +45,62 @@ def check_token(tok):
     tok = tok.replace("-", "")
     return tok, is_punc, is_number
 
-def get_allbracketsfiles(rpath, suffix=".brackets"):
-    bracketsfiles = [join(rpath, fname) for fname in listdir(rpath) if fname.endswith(suffix)]
+def get_allbracketsfiles(rpath, suffix="*.brackets"):
+    bracketsfiles = []
+    for root, dirnames, file_names in os.walk(rpath):
+        for file_name in fnmatch.filter(file_names, suffix):
+            bracketsfiles.append(join(root, file_name))
     print "Read {} files".format(len(bracketsfiles))
     return bracketsfiles
 
 
-def get_docdict(bracketsfiles, trn_labels, tst_labels, suffix=".brackets"):
+def get_docdict(bracketsfiles, trn_labels, dev_labels, tst_labels, suffix=".brackets"):
     counter = 0
-    trn_docdict, tst_docdict = {}, {}
+    trn_docdict, dev_docdict, tst_docdict = {}, {}, {}
     for fbrackets in bracketsfiles:
         # print "Read file: {}".format(fbrackets)
-        fmerge = fbrackets.replace(suffix, ".merge")
+        fmerge = fbrackets.replace("brackets", "merge")
         rstreader = RSTReader(fmerge, fbrackets)
         try:
             rstreader.read()
         except SyntaxError:
-            # print "Ignore file: ", fmerge
+            print "Ignore file: ", fmerge
             counter += 1
             continue
         fname = basename(fmerge).replace(".merge","")
         setlabel, fidx = parse_fname(fname)
         if setlabel == "train":
-            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, int(trn_labels[fidx])-1)
+            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, int(trn_labels[fidx])-1)  # convert to scale of 0-4 instead of 1-5
             trn_docdict[fname] = doc
+        elif setlabel == "dev":
+            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes,
+                      int(dev_labels[fidx]) - 1)
+            dev_docdict[fname] = doc
         elif setlabel == "test":
             doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, int(tst_labels[fidx])-1)
             tst_docdict[fname] = doc
     print "Ignore {} files in total".format(counter)
-    return trn_docdict, tst_docdict
+    return trn_docdict, dev_docdict, tst_docdict
 
-def get_vocab(docs, thresh=10000):
+def get_vocab(trn_docs, dev_docs, thresh=10000):
     counts = defaultdict(int)
     rela_vocab = {'root':0}
-    for (fname, doc) in docs.iteritems():
+    for (fname, doc) in trn_docs.iteritems():
+        for (eidx, edu) in doc.edus.iteritems():
+            tokens = edu.strip().split()
+            for tok in tokens:
+                tok, is_punc, is_number = check_token(tok)
+                if is_punc:
+                    continue
+                if is_number:
+                    tok = "NUMBER"
+                counts[tok] += 1
+        for (eidx, rela) in doc.relas.iteritems():
+            try:
+                rela_vocab[rela]
+            except KeyError:
+                rela_vocab[rela] = len(rela_vocab)
+    for (fname, doc) in dev_docs.iteritems():
         for (eidx, edu) in doc.edus.iteritems():
             tokens = edu.strip().split()
             for tok in tokens:
@@ -125,12 +148,20 @@ def refine_with_vocab(edu, vocab):
     return " ".join(new_tokens), t_count, u_count
 
 
-def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False):
+def write_dict(rvocab, fdict):
+    with open(fdict, 'wb') as f:
+        cPickle.dump(rvocab, f)
+
+
+def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False, dev_docdict=None, dev_outfname=None):
     print "Write docs into file: {}".format(outfname)
     if is_trnfile:
         w2vfname = outfname.replace("txt", "w2v")
-        print "Write tokens into file: {}".format(w2vfname)
+        print "Write train tokens into file: {}".format(w2vfname)
         fw2v = open(w2vfname, 'w')
+        w2vfname_dev = dev_outfname.replace("txt", "w2v")
+        print "Write dev tokens into file: {}".format(w2vfname_dev)
+        fw2v_dev = open(w2vfname_dev, 'w')
     total_count, unk_count = 0.0, 0.0
     with open(outfname, 'w') as fout:
         fout.write("EIDX\tPIDX\tRIDX\tEDU\n")
@@ -156,11 +187,36 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False):
                 if is_trnfile:
                     fw2v.write("{}\n".format(edu))
             fout.write("=============\t{}\t{}\n".format(fname, doc.label))
+    if is_trnfile:
+        with open(dev_outfname, 'w') as fout:
+            fout.write("EIDX\tPIDX\tRIDX\tEDU\n")
+            for (fname, doc) in dev_docdict.iteritems():
+                edus = doc.edus
+                for eidx in range(len(edus)):
+                    edu = edus[eidx + 1]
+                    edu, tc, uc = refine_with_vocab(edu, wvocab)
+                    total_count += tc
+                    unk_count += uc
+                    try:
+                        ridx = rvocab[doc.relas[eidx + 1]]
+                    except KeyError:
+                        ridx = rvocab['elaboration']
+                    try:
+                        pidx = doc.pnodes[eidx + 1] - 1
+                    except KeyError:
+                        print fname, eidx + 1
+                        print doc.pnodes
+                    line = "{}\t{}\t{}\t{}\n".format(eidx, pidx, ridx, edu)
+                    fout.write(line)
+                    # fw2v.write("<s> {} </s>\n".format(edu))
+                    fw2v_dev.write("{}\n".format(edu))
+                fout.write("=============\t{}\t{}\n".format(fname, doc.label))
     # counts
     print "Total tokens: {}; UNK counts: {}; Ratio: {}".format(total_count, unk_count, (unk_count/total_count))
     # write vocab
     if is_trnfile:
         fw2v.close()
+        fw2v_dev.close()
         vocabfname = outfname.replace("txt", "vocab")
         with open(vocabfname, "w") as fout:
             for (key, val) in wvocab.iteritems():
@@ -169,30 +225,43 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False):
 
 
 def main():
+    if len(sys.argv) != 2:
+        print "FORMAT: data_dir"
+        sys.exit(1)
+
+    data_dir = sys.argv[1]
+
     # pls change T and FOLDER at the sametime
     T = 10000
-    FOLDER = "fortextclass25-10K"
-    SUFFIX = ".brackets25"
+    #FOLDER = "fortextclass-10K"
+    #SUFFIX = ".brackets25"
+    SUFFIX = "*.brackets"
     # load labels
-    trn_labels = load_labels("../data/yelp/train.labels.gz")
-    tst_labels = load_labels("../data/yelp/test.labels.gz")
+    trn_labels = load_labels(os.path.join(data_dir, "train.labels.gz"))
+    dev_labels = load_labels(os.path.join(data_dir, "dev.labels.gz"))
+    tst_labels = load_labels(os.path.join(data_dir, "test.labels.gz"))
     # load all files
-    rpath = "../data/yelp/parses/"
+    rpath = os.path.join(data_dir, "parses/")
     flist = get_allbracketsfiles(rpath, SUFFIX)
-    trn_docdict, tst_docdict = get_docdict(flist, trn_labels, tst_labels, SUFFIX)
+    trn_docdict, dev_docdict, tst_docdict = get_docdict(flist, trn_labels, dev_labels, tst_labels, SUFFIX)
     # get vocabs
-    wvocab, rvocab = get_vocab(trn_docdict, thresh=T)
+    wvocab, rvocab = get_vocab(trn_docdict, dev_docdict, thresh=T)
     # write files
-    ftrn = "../data/yelp/{}/trn-yelp.txt".format(FOLDER)
-    write_docs(trn_docdict, wvocab, rvocab, ftrn, is_trnfile=True)
-    ftst = "../data/yelp/{}/tst-yelp.txt".format(FOLDER)
+    ftrn = os.path.join(data_dir, "output/trn-yelp.txt")
+    fdev = os.path.join(data_dir, "output/dev-yelp.txt")
+    write_docs(trn_docdict, wvocab, rvocab, ftrn, is_trnfile=True, dev_docdict=dev_docdict, dev_outfname=fdev)
+    ftst = os.path.join(data_dir, "output/tst-yelp.txt")
     write_docs(tst_docdict, wvocab, rvocab, ftst)
-    infofname = "../data/yelp/{}/info-yelp.txt".format(FOLDER)
+    infofname = os.path.join(data_dir, "output/info-yelp.txt")
+    fdict = os.path.join(data_dir, "output/relations.p")
+    write_dict(rvocab, fdict)
     with open(infofname, 'w') as fout:
         fout.write("Size of the training examples: {}\n".format(len(trn_docdict)))
+        fout.write("Size of the development examples: {}\n".format(len(dev_docdict)))
         fout.write("Size of the test examples: {}\n".format(len(tst_docdict)))
         fout.write("Size of the word vocab: {}\n".format(len(wvocab)))
         fout.write("Size of the relation vocab: {}\n".format(len(rvocab)))
+        fout.write("Relation mapping: {}\n".format(rvocab))
     
 
 
