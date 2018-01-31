@@ -22,6 +22,9 @@ class Elem(object):
 class BracketReader(object):
     def __init__(self):
         self.parse = None
+        self.nn_rels = set()
+        self.ns_rels = set()
+        self.sn_rels = set()
 
 
     def _load_brackets(self, fbracket):
@@ -99,10 +102,15 @@ class BracketReader(object):
                 # pass all leaf nodes
                 continue
             if (elem.form == "NS") or (elem.form == "NN"):
+                if elem.form == "NN":
+                    self.nn_rels.add(elem.right_child.rela)
+                else:
+                    self.ns_rels.add(elem.right_child.rela)
                 head = elem.left_child.nucleus_edu
                 modifier = elem.right_child.nucleus_edu
                 rela = elem.right_child.rela
             elif elem.form == "SN":
+                self.sn_rels.add(elem.left_child.rela)
                 head = elem.right_child.nucleus_edu
                 modifier = elem.left_child.nucleus_edu
                 rela = elem.left_child.rela

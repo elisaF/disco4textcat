@@ -15,6 +15,9 @@ class RSTReader(object):
         self.segtexts = None
         self.pnodes = None
         self.lowercase = lowercase
+        self.nn_rels = set()
+        self.ns_rels = set()
+        self.sn_rels = set()
 
 
     def _load_segmentation(self):
@@ -29,9 +32,9 @@ class RSTReader(object):
                 items = line.split("\t")
                 token, idx = None, int(items[-1])
                 if self.lowercase:
-                    token = items[2].lower()
+                    token = items[0].lower()
                 else:
-                    token = items[2]
+                    token = items[0]
                 try:
                     segs[idx] += (" " + token)
                 except KeyError:
@@ -61,6 +64,9 @@ class RSTReader(object):
         self.textdepths = depths
         self.textrelas = relas
         self.pnodes = pnodes
+        self.nn_rels = reader.nn_rels
+        self.ns_rels = reader.nn_rels
+        self.sn_rels = reader.sn_rels
 
 
     def read(self):
@@ -70,14 +76,14 @@ class RSTReader(object):
 
 
 def test():
-    fmerge = "../data/immigrationv1/parses/Immigration1.0-28458.merge"
-    fbracket = "../data/immigrationv1/parses/Immigration1.0-28458.brackets"
+    fmerge = "/Users/elisa/Documents/CompLing/discourse/parsers/fengHirst_RSTParser/texts/results/train-221022.txt.merge"
+    fbracket = "/Users/elisa/Documents/CompLing/discourse/parsers/fengHirst_RSTParser/texts/results/train-221022.txt.brackets"
     rstreader = RSTReader(fmerge, fbracket)
     rstreader.read()
-    print rstreader.textdepths
-    print rstreader.segtexts
-    print rstreader.textrelas
-    print rstreader.childnodes
+    print "Depths: ", rstreader.textdepths
+    print "Texts: ", rstreader.segtexts
+    print "Relations: ", rstreader.textrelas
+    print "Pnodes: ", rstreader.pnodes
 
 
 if __name__ == '__main__':

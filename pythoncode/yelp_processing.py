@@ -56,6 +56,7 @@ def get_allbracketsfiles(rpath, suffix="*.brackets"):
 
 def get_docdict(bracketsfiles, trn_labels, dev_labels, tst_labels, suffix=".brackets"):
     counter = 0
+    nn_rels, ns_rels, sn_rels = set(), set(), set()
     trn_docdict, dev_docdict, tst_docdict = {}, {}, {}
     for fbrackets in bracketsfiles:
         # print "Read file: {}".format(fbrackets)
@@ -63,10 +64,14 @@ def get_docdict(bracketsfiles, trn_labels, dev_labels, tst_labels, suffix=".brac
         rstreader = RSTReader(fmerge, fbrackets)
         try:
             rstreader.read()
+            nn_rels.update(rstreader.nn_rels)
+            ns_rels.update(rstreader.ns_rels)
+            sn_rels.update(rstreader.sn_rels)
         except SyntaxError:
             print "Ignore file: ", fmerge
             counter += 1
             continue
+
         fname = basename(fmerge).replace(".merge","")
         setlabel, fidx = parse_fname(fname)
         if setlabel == "train":
@@ -80,6 +85,10 @@ def get_docdict(bracketsfiles, trn_labels, dev_labels, tst_labels, suffix=".brac
             doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, int(tst_labels[fidx])-1)
             tst_docdict[fname] = doc
     print "Ignore {} files in total".format(counter)
+    with open("relations.sets", 'w') as fout:
+        fout.write("\nnn: " + str(nn_rels))
+        fout.write("\nns: " + str(ns_rels))
+        fout.write("\nsn: " + str(sn_rels))
     return trn_docdict, dev_docdict, tst_docdict
 
 def get_vocab(trn_docs, dev_docs, thresh=10000):
@@ -262,7 +271,7 @@ def main():
         fout.write("Size of the word vocab: {}\n".format(len(wvocab)))
         fout.write("Size of the relation vocab: {}\n".format(len(rvocab)))
         fout.write("Relation mapping: {}\n".format(rvocab))
-    
+
 
 
 if __name__ == '__main__':
