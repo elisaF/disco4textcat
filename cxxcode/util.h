@@ -29,13 +29,13 @@ typedef vector<pair<unsigned, float>> Record;
 typedef vector<int> Edu;
 
 struct Doc{
-  vector<Edu> edus; // a collection of EDUs
-  vector<int> order; // topological order of pnodes
-  map<int, vector<int>> tree; // pnode : {children_nodes}
-  map<int, int> relas;
-  int root; // root node
-  unsigned label; // document label
-  string filename;
+    vector<Edu> edus; // a collection of EDUs
+    vector<int> order; // topological order of pnodes
+    map<int, vector<int>> tree; // pnode : {children_nodes}
+    map<int, int> relas;
+    int root; // root node
+    unsigned label; // document label
+    string filename;
 };
 
 typedef vector<Doc> Corpus;
