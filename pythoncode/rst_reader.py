@@ -65,7 +65,7 @@ class RSTReader(object):
         self.textrelas = relas
         self.pnodes = pnodes
         self.nn_rels = reader.nn_rels
-        self.ns_rels = reader.nn_rels
+        self.ns_rels = reader.ns_rels
         self.sn_rels = reader.sn_rels
 
 

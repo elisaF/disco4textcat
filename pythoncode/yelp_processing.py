@@ -86,9 +86,9 @@ def get_docdict(bracketsfiles, trn_labels, dev_labels, tst_labels, suffix=".brac
             tst_docdict[fname] = doc
     print "Ignore {} files in total".format(counter)
     with open("relations.sets", 'w') as fout:
-        fout.write("\nnn: " + str(nn_rels))
-        fout.write("\nns: " + str(ns_rels))
-        fout.write("\nsn: " + str(sn_rels))
+        fout.write("\nnn: "+ str(nn_rels))
+        fout.write("\nns: "+ str(ns_rels))
+        fout.write("\nsn: "+ str(sn_rels))
     return trn_docdict, dev_docdict, tst_docdict
 
 def get_vocab(trn_docs, dev_docs, thresh=10000):
@@ -188,7 +188,7 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False, dev_docdict=
                 try:
                     pidx = doc.pnodes[eidx+1]-1
                 except KeyError:
-                    print fname, eidx + 1
+                    print "KeyError: ", fname, eidx + 1
                     print doc.pnodes
                 line = "{}\t{}\t{}\t{}\n".format(eidx, pidx, ridx, edu)
                 fout.write(line)
@@ -213,7 +213,7 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False, dev_docdict=
                     try:
                         pidx = doc.pnodes[eidx + 1] - 1
                     except KeyError:
-                        print fname, eidx + 1
+                        print "KeyError for dev: ", fname, eidx + 1
                         print doc.pnodes
                     line = "{}\t{}\t{}\t{}\n".format(eidx, pidx, ridx, edu)
                     fout.write(line)
@@ -250,7 +250,7 @@ def main():
     dev_labels = load_labels(os.path.join(data_dir, "dev.labels.gz"))
     tst_labels = load_labels(os.path.join(data_dir, "test.labels.gz"))
     # load all files
-    rpath = os.path.join(data_dir, "parses/")
+    rpath = os.path.join(data_dir, "feng_parses/")
     flist = get_allbracketsfiles(rpath, SUFFIX)
     trn_docdict, dev_docdict, tst_docdict = get_docdict(flist, trn_labels, dev_labels, tst_labels, SUFFIX)
     # get vocabs
