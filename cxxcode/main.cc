@@ -22,6 +22,8 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/format.hpp>
 
+
+
 namespace po = boost::program_options;
 
 #define _NO_DEBUG_MODE_ 1
@@ -214,7 +216,7 @@ int main(int argc, char** argv) {
 
     // start do sth
     if (task == "train"){
-        unsigned reportfreq = 1000;
+        unsigned reportfreq = 50;
         float best_dev_acc = 0.0;
         vector<unsigned> order(trncorpus.size());
         for (unsigned i = 0; i < order.size(); ++i) order[i] = i;

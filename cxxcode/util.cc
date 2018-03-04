@@ -7,6 +7,7 @@
 #include <queue>
 
 #include "util.h"
+#include "dynet/io.h"
 
 using namespace std;
 
