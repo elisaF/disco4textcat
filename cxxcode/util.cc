@@ -133,10 +133,14 @@ void print_float_vector(const vector<float>& vec){
 // save dict from a archive file
 // *******************************************************
 int save_dict(string fname, dynet::Dict& d){
-    // fname += ".dict";
     ofstream out(fname);
-    boost::archive::text_oarchive odict(out);
-    odict << d; out.close();
+    for(const auto & str : d.get_words())
+        out << str << '\n';
+    out << endl; out.close();
+    // fname += ".dict";
+    //ofstream out(fname);
+    //boost::archive::text_oarchive odict(out);
+    //odict << d; out.close();
     return 0;
 }
 
@@ -144,10 +148,13 @@ int save_dict(string fname, dynet::Dict& d){
 // load dict from a archive file
 // *******************************************************
 int load_dict(string fname, dynet::Dict& d){
+    ifstream if_src_vocab(fname);
+    string sword;
+    while (getline(if_src_vocab, sword)) d.convert(sword);
     // fname += ".dict";
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> d; in.close();
+    //ifstream in(fname);
+    //boost::archive::text_iarchive ia(in);
+    //ia >> d; in.close();
     return 0;
 }
 
@@ -155,9 +162,11 @@ int load_dict(string fname, dynet::Dict& d){
 // load model from a archive file
 // *******************************************************
 int load_model(string fname, Model& model){
-    ifstream in(fname);
-    boost::archive::text_iarchive ia(in);
-    ia >> model;
+    TextFileLoader loader(fname);
+    loader.populate(model);
+    //ifstream in(fname);
+    //boost::archive::text_iarchive ia(in);
+    //ia >> model;
     return 0;
 }
 
@@ -165,9 +174,11 @@ int load_model(string fname, Model& model){
 // save model from a archive file
 // *******************************************************
 int save_model(string fname, Model& model){
-    ofstream out(fname);
-    boost::archive::text_oarchive oa(out);
-    oa << model;
-    out.close();
+    TextFileSaver saver(fname);
+    saver.save(model);
+    //ofstream out(fname);
+    //boost::archive::text_oarchive oa(out);
+    //oa << model;
+    //out.close();
     return 0;
 }

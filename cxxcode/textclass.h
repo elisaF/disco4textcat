@@ -205,7 +205,7 @@ Expression TextClass<Builder>::build_model(Doc& doc,
     // get classification parameters
     Expression Uc = parameter(cg, p_Uc);
     Expression bias = parameter(cg, p_bias);
-    // compuate the log-prob
+    // compute the log-prob
     Expression logit = (Uc * root) + bias;
     if (b_test){
         Expression prob = softmax(logit);

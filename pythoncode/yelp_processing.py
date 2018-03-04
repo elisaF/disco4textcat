@@ -9,11 +9,13 @@ import fnmatch
 
 
 class Doc(object):
-    def __init__(self, fname, edus, relas, pnodes, label=None):
+    def __init__(self, fname, edus, relas, pnodes, depths, forms, label=None):
         self.fname = fname
         self.edus = edus
         self.relas = relas
         self.pnodes = pnodes
+        self.textdepths = depths
+        self.nodeforms = forms
         self.label = label
 
 def parse_fname(fname):
@@ -75,14 +77,16 @@ def get_docdict(bracketsfiles, trn_labels, dev_labels, tst_labels, suffix=".brac
         fname = basename(fmerge).replace(".merge","")
         setlabel, fidx = parse_fname(fname)
         if setlabel == "train":
-            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, int(trn_labels[fidx])-1)  # convert to scale of 0-4 instead of 1-5
+            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, rstreader.textdepths, rstreader.nodeforms,
+                      int(trn_labels[fidx])-1)  # convert to scale of 0-4 instead of 1-5
             trn_docdict[fname] = doc
         elif setlabel == "dev":
-            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes,
+            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, rstreader.textdepths, rstreader.nodeforms,
                       int(dev_labels[fidx]) - 1)
             dev_docdict[fname] = doc
         elif setlabel == "test":
-            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, int(tst_labels[fidx])-1)
+            doc = Doc(fname, rstreader.segtexts, rstreader.textrelas, rstreader.pnodes, rstreader.textdepths, rstreader.nodeforms,
+                      int(tst_labels[fidx])-1)
             tst_docdict[fname] = doc
     print "Ignore {} files in total".format(counter)
     with open("relations.sets", 'w') as fout:
@@ -173,7 +177,7 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False, dev_docdict=
         fw2v_dev = open(w2vfname_dev, 'w')
     total_count, unk_count = 0.0, 0.0
     with open(outfname, 'w') as fout:
-        fout.write("EIDX\tPIDX\tRIDX\tEDU\n")
+        fout.write("EIDX\tPIDX\tRIDX\tEDU\tDEPTH\tFORM\n")
         for (fname, doc) in docdict.iteritems():
             edus = doc.edus
             for eidx in range(len(edus)):
@@ -190,7 +194,9 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False, dev_docdict=
                 except KeyError:
                     print "KeyError: ", fname, eidx + 1
                     print doc.pnodes
-                line = "{}\t{}\t{}\t{}\n".format(eidx, pidx, ridx, edu)
+                depth = doc.textdepths[eidx+1]
+                form = doc.nodeforms[eidx+1]
+                line = "{}\t{}\t{}\t{}\t{}\t{}\n".format(eidx, pidx, ridx, edu, depth, form)
                 fout.write(line)
                 # fw2v.write("<s> {} </s>\n".format(edu))
                 if is_trnfile:
@@ -198,7 +204,7 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False, dev_docdict=
             fout.write("=============\t{}\t{}\n".format(fname, doc.label))
     if is_trnfile:
         with open(dev_outfname, 'w') as fout:
-            fout.write("EIDX\tPIDX\tRIDX\tEDU\n")
+            fout.write("EIDX\tPIDX\tRIDX\tEDU\tDEPTH\tFORM\n")
             for (fname, doc) in dev_docdict.iteritems():
                 edus = doc.edus
                 for eidx in range(len(edus)):
@@ -215,7 +221,9 @@ def write_docs(docdict, wvocab, rvocab, outfname, is_trnfile=False, dev_docdict=
                     except KeyError:
                         print "KeyError for dev: ", fname, eidx + 1
                         print doc.pnodes
-                    line = "{}\t{}\t{}\t{}\n".format(eidx, pidx, ridx, edu)
+                    depth = doc.textdepths[eidx + 1]
+                    form = doc.nodeforms[eidx + 1]
+                    line = "{}\t{}\t{}\t{}\t{}\t{}\n".format(eidx, pidx, ridx, edu, depth, form)
                     fout.write(line)
                     # fw2v.write("<s> {} </s>\n".format(edu))
                     fw2v_dev.write("{}\n".format(edu))

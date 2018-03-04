@@ -14,6 +14,7 @@ class RSTReader(object):
         self.textrelas = None
         self.segtexts = None
         self.pnodes = None
+        self.nodeforms = None
         self.lowercase = lowercase
         self.nn_rels = set()
         self.ns_rels = set()
@@ -50,9 +51,10 @@ class RSTReader(object):
         reader.read(self.fbracket)
         deps = reader.convert()
         # print deps
-        depths, relas, pnodes = {}, {}, {}
+        depths, relas, pnodes, forms = {}, {}, {}, {}
         for dep in deps:
             relas[dep[1]] = dep[2]
+            forms[dep[1]] = dep[3]
             if dep[0] == 'ROOT':
                 depths[dep[1]] = 1
             else:
@@ -64,26 +66,27 @@ class RSTReader(object):
         self.textdepths = depths
         self.textrelas = relas
         self.pnodes = pnodes
+        self.nodeforms = forms
         self.nn_rels = reader.nn_rels
         self.ns_rels = reader.ns_rels
         self.sn_rels = reader.sn_rels
 
-
     def read(self):
         self._load_segmentation()
         self._load_brackets()
-        return self.segtexts, self.textdepths, self.textrelas
+        return self.segtexts, self.textdepths, self.textrelas, self.nodeforms
 
 
 def test():
-    fmerge = "/Users/elisa/Documents/CompLing/discourse/parsers/fengHirst_RSTParser/texts/results/train-221022.txt.merge"
-    fbracket = "/Users/elisa/Documents/CompLing/discourse/parsers/fengHirst_RSTParser/texts/results/train-221022.txt.brackets"
+    fmerge = "/Users/elisa/Documents/CompLing/discourse/parsers/fengHirst_RSTParser_newNLTK/texts/results/train-221022.txt.merge"
+    fbracket = "/Users/elisa/Documents/CompLing/discourse/parsers/fengHirst_RSTParser_newNLTK/texts/results/train-221022.txt.brackets"
     rstreader = RSTReader(fmerge, fbracket)
     rstreader.read()
     print "Depths: ", rstreader.textdepths
     print "Texts: ", rstreader.segtexts
     print "Relations: ", rstreader.textrelas
     print "Pnodes: ", rstreader.pnodes
+    print "Node forms: ", rstreader.nodeforms
 
 
 if __name__ == '__main__':

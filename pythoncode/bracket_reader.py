@@ -17,6 +17,7 @@ class Elem(object):
         self.nucleus_edu = None
         self.form = None
         self.is_leaf = False
+        self.depth = None
 
 
 class BracketReader(object):
@@ -87,9 +88,10 @@ class BracketReader(object):
 
     def convert(self):
         """ Convert to a dependency structure
+        Head, modifier, relation, node form (RT, NN, NS, SN)
         """
         queue = [self.parse]
-        deps = [('ROOT', self.parse.nucleus_edu, 'root')]
+        deps = [('ROOT', self.parse.nucleus_edu, 'root', 'RT')]
         while queue:
             elem = queue.pop(0)
             if elem.left_child is not None:
@@ -114,7 +116,7 @@ class BracketReader(object):
                 head = elem.right_child.nucleus_edu
                 modifier = elem.left_child.nucleus_edu
                 rela = elem.left_child.rela
-            deps.append((head, modifier, rela))
+            deps.append((head, modifier, rela, elem.form))
         return deps
 
         
